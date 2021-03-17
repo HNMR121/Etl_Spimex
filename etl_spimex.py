@@ -19,8 +19,8 @@ ORDER BY Дата DESC"""
 class EtlSpimex:
 
     def __init__(self, ):
-        self.name_xls2 = self.date_check()
-        self.name_xls = self.parse_name_xls()
+        # self.name_xls2 = self.date_check()
+        # self.name_xls = self.parse_name_xls()
         # self.soup = BeautifulSoup(self.get_response(url_parse).text, "lxml")
         self.date_last = self.last_date_base()
 
@@ -43,12 +43,12 @@ class EtlSpimex:
         soup = self.get_soup(url_parse)
         # soup = self.get_soup(self,url_parse)
         z = soup.find_all('a', {"class": "accordeon-inner__item-title link xls"}, href=True)
-        name_xls_temp = []
+        name_xls = []
         for a in z:
             if a.text:
                 if len(a['href']) > 13:
-                    name_xls_temp.append(a['href'])
-        return name_xls_temp
+                    name_xls.append(a['href'])
+        return name_xls
 
     def last_date_base(self):
         date_last = pd.read_sql(sql, engine)
@@ -59,7 +59,7 @@ class EtlSpimex:
 
     def date_check(self,):
         name_xls2 = []
-        for a in self.name_xls:
+        for a in self.parse_name_xls():
             year = a.split('xls_')[1][:4]
             month = a.split('xls_')[1][4:6]
             day = a.split('xls_')[1][6:8]
@@ -111,27 +111,44 @@ class EtlSpimex:
 
 
     def read_xls2(self):
-        df = self.etl_df(pd.read_excel(f'{url_spimex}'+ self.name_xls2[0]))
+        df = self.etl_df(pd.read_excel(f'{url_spimex}'+ self.date_check()[0]))
         # df = pd.read_excel(f'{url_spimex}'+ self.name_xls[0])
-        for i in self.name_xls2:
+        for i in self.date_check():
             df2 = self.etl_df(pd.read_excel(url_spimex + i))
             df = pd.concat([df, df2], ignore_index=True)
 
         return df
 
 
+    def load_to_db(self):
+        df = self.read_xls2()
+        df.to_sql('SPB', con=engine, if_exists='append', index=False)
+        print("ok")
+
+
+
+
 
 
 etl = EtlSpimex()
-# df = a.parse_name_xls()
-# df2 = a.read_xls2()
+df = etl.read_xls2()
+print(df)
+# etl.load_to_db()
+# df = etl.parse_name_xls()
+# df = etl.date_check()
+# df = etl.read_xls2()
 # print(df)
+# df.to_excel(r'C:\Users\a.fadeev\PycharmProjects\Samples\tp\Test.xlsx',sheet_name="Лист1",index=False)
 # print(df2)
 # df2.to_excel(r'C:\Users\a.fadeev\PycharmProjects\Samples\tp\Test.xlsx',sheet_name="Лист1",index=False)
 
-print(etl.last_date_base())
+# print(etl.last_date_base())
 
 # print(etl.date_check())
 
 # df2 = etl.read_xls2()
 # print(df2)
+
+# Столбец даты
+# date_df = '01.01.2021'
+# date_df = dt.datetime.strptime(date_df,'%d.%m.%Y').replace(hour=0, minute=0, second=0, microsecond=0)
