@@ -151,4 +151,4 @@ print(df)
 
 # Столбец даты
 # date_df = '01.01.2021'
-# date_df = dt.datetime.strptime(date_df,'%d.%m.%Y').replace(hour=0, minute=0, second=0, microsecond=0)
+ # date_df = dt.datetime.strptime(date_df,'%d.%m.%Y').replace(hour=0, minute=0, second=0, microsecond=0)
