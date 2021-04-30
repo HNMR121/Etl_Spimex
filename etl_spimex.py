@@ -1,14 +1,16 @@
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import datetime as dt
 import sqlalchemy
+import datetime as dt
 
 url_spimex = 'https://spimex.com'
 # name_xls = '/upload/reports/oil_xls/oil_xls_20210312162000.xls?r=1370'
 url_parse = 'https://spimex.com/markets/oil_products/trades/results/'
 
-engine = sqlalchemy.create_engine("mssql+pyodbc://@{sds-srv-dev}/{Spimex2}?driver=SQL+Server+Native+Client+11.0?trusted_connection=yes")
+# engine = sqlalchemy.create_engine("mssql+pyodbc://@{sds-srv-dev}/{Spimex2}?driver=SQL+Server+Native+Client+11.0?trusted_connection=yes")
+engine = sqlalchemy.create_engine("mssql+pyodbc://@{LT-FADEEV\SQLEXPRESS}/{Spimex2}?driver=SQL+Server+Native+Client+11.0?trusted_connection=yes")
+
 sql = """SELECT TOP(1) Дата
 FROM            dbo.SPB
 GROUP BY Дата, Показатель
@@ -105,6 +107,33 @@ class EtlSpimex:
         df['Показатель'] = 'Нефтепродукты'
         df = df.reindex(columns=collist)
         df = df[df['SKU'].notnull()]
+
+        col_list = ['Объем Договоров,т',
+                    'Объем Договоров,руб',
+                    'Цена Минимальная,руб',
+                    'Цена Средневзвешенная,руб',
+                    'Цена Максимальная,руб',
+                    'Цена Рыночная,руб',
+                    'Цена в Заявках лучшее предложение,руб',
+                    'Цена в Заявках лучший спрос,руб',
+                    'Кол-во договоров,шт']
+        for i in col_list:
+            df[i] = df[i].apply(lambda x: x.replace('-', '0')).astype(float)
+
+        df['Дата'] = df['Дата'].apply(lambda x:
+                                      dt.datetime.strptime(x, '%d.%m.%Y').replace(hour=0, minute=0, second=0,
+                                                                                  microsecond=0))
+        # вот это уже не нужно
+        # df['Объем Договоров,т'] = df['Объем Договоров,т'].astype(float)
+        # df['Объем Договоров,руб'] = df['Объем Договоров,руб'].astype(float)
+        # df['Цена Минимальная,руб'] = df['Цена Минимальная,руб'].astype(float)
+        # df['Цена Средневзвешенная,руб'] = df['Цена Средневзвешенная,руб'].astype(float)
+        # df['Цена Максимальная,руб'] = df['Цена Максимальная,руб'].astype(float)
+        # df['Цена Рыночная,руб'] = df['Цена Рыночная,руб'].astype(float)
+        # df['Цена в Заявках лучшее предложение,руб'] = df['Цена в Заявках лучшее предложение,руб'].astype(float)
+        # df['Цена в Заявках лучший спрос,руб'] = df['Цена в Заявках лучший спрос,руб'].astype(float)
+        # df['Кол-во договоров,шт'] = df['Кол-во договоров,шт'].astype(float)
+        # df = df[df['Дата'] < dt.datetime.now()] неактуально удалить
         return df
 
 
@@ -112,6 +141,7 @@ class EtlSpimex:
 
     def read_xls2(self):
         df = self.etl_df(pd.read_excel(f'{url_spimex}'+ self.date_check()[0]))
+        df = df[0:0]
         # df = pd.read_excel(f'{url_spimex}'+ self.name_xls[0])
         for i in self.date_check():
             df2 = self.etl_df(pd.read_excel(url_spimex + i))
@@ -132,7 +162,13 @@ class EtlSpimex:
 
 etl = EtlSpimex()
 df = etl.read_xls2()
+
+# df = etl.last_date_base()
 print(df)
+
+# df.to_sql('SPB',con = engine,if_exists='append',index = False )
+df.to_excel(r'C:\Users\a.fadeev\PycharmProjects\Samples\tp\Test.xlsx',sheet_name="Лист1",index=False)
+
 # etl.load_to_db()
 # df = etl.parse_name_xls()
 # df = etl.date_check()
